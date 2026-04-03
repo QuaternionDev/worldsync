@@ -5,9 +5,12 @@ import (
 
 	appconfig "github.com/QuaternionDev/worldsync/internal/config"
 	"github.com/QuaternionDev/worldsync/internal/launcher"
+	"github.com/QuaternionDev/worldsync/internal/storage"
+	worldsync "github.com/QuaternionDev/worldsync/internal/sync"
 	"github.com/QuaternionDev/worldsync/internal/world"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	rcloneconfig "github.com/rclone/rclone/fs/config"
 )
 
 // Tab indexek
@@ -89,6 +92,7 @@ type worldsLoadedMsg struct {
 
 type syncDoneMsg struct {
 	err error
+	msg string
 }
 
 type syncProgressMsg struct {
@@ -153,9 +157,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncing = false
 		if msg.err != nil {
 			m.err = msg.err
-			m.syncMsg = fmt.Sprintf("Error: %s", msg.err)
+			m.syncMsg = fmt.Sprintf("✗ Hiba: %s", msg.err)
 		} else {
-			m.syncMsg = "✓ Sync complete!"
+			m.err = nil
+			m.syncMsg = msg.msg
 		}
 
 	case syncProgressMsg:
@@ -206,10 +211,19 @@ func syncAllCmd(cfg *appconfig.Config) tea.Cmd {
 	return func() tea.Msg {
 		active := cfg.GetActiveProvider()
 		if active == nil {
-			return syncDoneMsg{err: fmt.Errorf("no active provider")}
+			return syncDoneMsg{err: fmt.Errorf("nincs aktív provider")}
+		}
+
+		stateDir := fmt.Sprintf("%s/state", appconfig.ConfigDir())
+		engine, err := worldsync.NewEngine(stateDir)
+		if err != nil {
+			return syncDoneMsg{err: err}
 		}
 
 		launchers := launcher.DetectAll()
+		syncedWorlds := 0
+		totalWorlds := 0
+
 		for _, l := range launchers {
 			var allWorlds []world.World
 			for _, savesPath := range l.SavePaths {
@@ -221,14 +235,40 @@ func syncAllCmd(cfg *appconfig.Config) tea.Cmd {
 				allWorlds = append(allWorlds, worlds...)
 			}
 			allWorlds = world.DeduplicateWorlds(allWorlds)
+			totalWorlds += len(allWorlds)
 
 			for _, w := range allWorlds {
-				_ = w
-				// TODO: sync logika itt
+				switch active.Type {
+				case appconfig.ProviderLocal:
+					destDir, _ := rcloneconfig.FileGetValue(active.RcloneName, "root")
+					if destDir == "" {
+						continue
+					}
+					if _, err := engine.SyncToLocal(w.Path, destDir); err != nil {
+						continue
+					}
+
+				default:
+					provider, err := storage.NewRcloneProvider(
+						active.Name,
+						active.RcloneName,
+						"WorldSync/worlds",
+					)
+					if err != nil {
+						continue
+					}
+					if err := provider.SyncWorld(w.Path, w.Name); err != nil {
+						continue
+					}
+				}
+				syncedWorlds++
 			}
 		}
 
-		return syncDoneMsg{err: nil}
+		return syncDoneMsg{
+			err: nil,
+			msg: fmt.Sprintf("✓ %d/%d világ szinkronizálva!", syncedWorlds, totalWorlds),
+		}
 	}
 }
 
