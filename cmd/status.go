@@ -10,7 +10,7 @@ import (
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Megjeleníti az összes világot és azok állapotát",
+	Short: "Displays all the worlds and their states",
 	Run:   runStatus,
 }
 

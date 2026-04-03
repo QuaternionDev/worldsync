@@ -14,10 +14,10 @@ var cfg *appconfig.Config
 
 var rootCmd = &cobra.Command{
 	Use:   "worldsync",
-	Short: "Minecraft világ szinkronizáló",
-	Long: `WorldSync – Minecraft Java Edition cloud sync eszköz.
-Szinkronizáld világaidat OneDrive-ra, Google Drive-ra, 
-Proton Drive-ra, SFTP/SMB szerverekre és még sok másra.`,
+	Short: "Minecraft world sync tool",
+	Long: `WorldSync – Minecraft Java Edition cloud sync tool.
+	Sync your worlds to OneDrive, Google Drive,
+	Proton Drive, SFTP/SMB servers, and more.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -43,7 +43,7 @@ func initConfig() {
 	var err error
 	cfg, err = appconfig.Load()
 	if err != nil {
-		fmt.Printf("Konfiguráció hiba: %s\n", err)
+		fmt.Printf("Configuration error: %s\n", err)
 		os.Exit(1)
 	}
 }

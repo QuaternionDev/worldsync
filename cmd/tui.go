@@ -10,10 +10,10 @@ import (
 
 var tuiCmd = &cobra.Command{
 	Use:   "tui",
-	Short: "Interaktív terminal felület megnyitása",
+	Short: "Open interactive terminal interface",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := tui.Run(cfg); err != nil {
-			fmt.Printf("TUI hiba: %s\n", err)
+			fmt.Printf("TUI error: %s\n", err)
 			os.Exit(1)
 		}
 	},

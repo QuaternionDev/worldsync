@@ -10,7 +10,7 @@ import (
 
 var providerCmd = &cobra.Command{
 	Use:   "provider",
-	Short: "Provider kezelés",
+	Short: "Provider management",
 }
 
 var providerListCmd = &cobra.Command{
