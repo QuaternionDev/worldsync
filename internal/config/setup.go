@@ -113,11 +113,35 @@ func configureRclone(remoteName, providerType string) error {
 	ctx := context.Background()
 
 	switch providerType {
-	case "onedrive", "drive", "protondrive":
-		fmt.Println("A böngésző megnyílik a hitelesítéshez...")
+	case "onedrive":
+		config.FileSetValue(remoteName, "type", "onedrive")
+		config.SaveConfig()
+		fmt.Println("Megnyílik a böngésző a Microsoft hitelesítéshez...")
 		fmt.Println("Ha nem nyílik meg automatikusan, másold be a megjelenő URL-t.")
 		fmt.Println()
 		config.NewRemote(ctx, remoteName)
+
+	case "drive":
+		config.FileSetValue(remoteName, "type", "drive")
+		config.FileSetValue(remoteName, "scope", "drive")
+		config.SaveConfig()
+		fmt.Println("Megnyílik a böngésző a Google hitelesítéshez...")
+		fmt.Println("Ha nem nyílik meg automatikusan, másold be a megjelenő URL-t.")
+		fmt.Println()
+		config.NewRemote(ctx, remoteName)
+
+	case "protondrive":
+		email, _ := prompt("Proton email: ")
+		pass, _ := promptPassword("Proton jelszó: ")
+		twofa, _ := prompt("2FA kód (ha van, különben Enter): ")
+
+		config.FileSetValue(remoteName, "type", "protondrive")
+		config.FileSetValue(remoteName, "username", email)
+		config.FileSetValue(remoteName, "password", pass)
+		if twofa != "" {
+			config.FileSetValue(remoteName, "2fa", twofa)
+		}
+		config.SaveConfig()
 
 	case "webdav":
 		url, _ := prompt("WebDAV URL (pl. https://nextcloud.example.com/remote.php/dav/files/user/): ")
@@ -162,7 +186,6 @@ func configureRclone(remoteName, providerType string) error {
 
 	case "local":
 		path, _ := prompt("Mappa útvonala (pl. D:\\Backup\\Minecraft): ")
-
 		config.FileSetValue(remoteName, "type", "local")
 		config.FileSetValue(remoteName, "root", path)
 		config.SaveConfig()

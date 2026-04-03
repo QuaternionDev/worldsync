@@ -6,13 +6,22 @@ import (
 
 	appconfig "github.com/QuaternionDev/worldsync/internal/config"
 	"github.com/QuaternionDev/worldsync/internal/launcher"
+	"github.com/QuaternionDev/worldsync/internal/storage"
 	"github.com/QuaternionDev/worldsync/internal/sync"
 	"github.com/QuaternionDev/worldsync/internal/world"
+	"github.com/rclone/rclone/fs/config"
+	"github.com/rclone/rclone/fs/config/configfile"
 )
 
 func main() {
 	fmt.Println("WorldSync v0.1.0")
 	fmt.Println()
+
+	// rclone config inicializálása
+	configfile.Install()
+	config.SetConfigPath(
+		fmt.Sprintf("%s/rclone.conf", appconfig.ConfigDir()),
+	)
 
 	// Konfiguráció betöltése
 	cfg, err := appconfig.Load()
@@ -32,28 +41,29 @@ func main() {
 		fmt.Println()
 	}
 
-	// Aktív provider kijelzése
+	// Aktív provider
 	active := cfg.GetActiveProvider()
-	if active != nil {
-		fmt.Printf("Aktív provider: %s (%s)\n", active.Name, active.Type)
-		fmt.Println()
+	if active == nil {
+		fmt.Println("Nincs aktív provider!")
+		os.Exit(1)
 	}
 
-	// State és backup mappák
-	stateDir := fmt.Sprintf("%s/state", appconfig.ConfigDir())
-	destDir := fmt.Sprintf("%s/backup", appconfig.ConfigDir())
+	fmt.Printf("Aktív provider: %s (%s)\n", active.Name, active.Type)
+	fmt.Println()
 
+	// State mappa
+	stateDir := fmt.Sprintf("%s/state", appconfig.ConfigDir())
 	engine, err := sync.NewEngine(stateDir)
 	if err != nil {
 		fmt.Printf("Engine hiba: %s\n", err)
 		os.Exit(1)
 	}
 
+	// Launchers keresése
 	fmt.Println("Launchers keresése...")
 	fmt.Println()
 
 	launchers := launcher.DetectAll()
-
 	if len(launchers) == 0 {
 		fmt.Println("Nem található egyetlen launcher sem.")
 		return
@@ -83,11 +93,37 @@ func main() {
 		fmt.Printf("  %d világ szinkronizálása...\n", len(allWorlds))
 
 		for _, w := range allWorlds {
-			engine.SyncToLocal(w.Path, destDir)
+			switch active.Type {
+			case appconfig.ProviderLocal:
+				// Lokális: az rclone.conf-ban tárolt root mappába
+				destDir, _ := config.FileGetValue(active.RcloneName, "root")
+				if destDir == "" {
+					fmt.Printf("  ✗ %s: nincs megadva célmappa\n", w.Name)
+					continue
+				}
+				engine.SyncToLocal(w.Path, destDir)
+
+			default:
+				// Cloud: rclone sync
+				provider, err := storage.NewRcloneProvider(
+					active.Name,
+					active.RcloneName,
+					"WorldSync/worlds",
+				)
+				if err != nil {
+					fmt.Printf("  ✗ %s: provider hiba: %s\n", w.Name, err)
+					continue
+				}
+				if err := provider.SyncWorld(w.Path, w.Name); err != nil {
+					fmt.Printf("  ✗ %s: sync hiba: %s\n", w.Name, err)
+					continue
+				}
+				fmt.Printf("  ✓ %s szinkronizálva\n", w.Name)
+			}
 		}
 
 		fmt.Println()
 	}
 
-	fmt.Printf("Kész! Backup helye: %s\n", destDir)
+	fmt.Println("Kész!")
 }
