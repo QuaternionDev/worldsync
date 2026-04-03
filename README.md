@@ -19,6 +19,22 @@ For any recommendations or further comments, drop me an email on kapcsolat@quate
 - **Terminal UI** – beautiful interactive interface
 - **CLI** – scriptable command-line interface
 
+## How Sync Works
+
+### Local provider
+WorldSync calculates a SHA-256 hash for every file in your world folder and compares it against the last sync state. Only changed files are copied to the backup destination. Sync state is stored in:
+- Windows: `%APPDATA%\WorldSync\state\`
+- Linux: `~/.config/worldsync/state/`
+
+### Cloud providers (OneDrive, Google Drive, etc.)
+WorldSync uses rclone's delta sync under the hood. It compares file sizes and modification times, and only uploads changed files to `WorldSync/worlds/<world_name>/` in your cloud storage.
+
+### Current limitations
+- Sync is **manual** – you need to run `worldsync sync` or use TUI after closing Minecraft
+- Download/restore from cloud is not yet implemented
+- Conflict detection is not yet implemented – if you played on two machines offline, the latest sync wins
+- Auto-sync on game exit is planned for a future release
+
 ## Installation
 
 ### Windows
