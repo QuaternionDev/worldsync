@@ -10,7 +10,10 @@ worldsync.exe
 
 # State és backup fájlok (ezek lokálisak, nem kellenek a repóba)
 /state/
-*.json
+/backup/
+
+# rclone konfig – tartalmaz hitelesítési adatokat!
+rclone.conf
 
 # VS Code
 .vscode/
