@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	_ "github.com/rclone/rclone/backend/drive"
+	_ "github.com/rclone/rclone/backend/local"
 	_ "github.com/rclone/rclone/backend/onedrive"
 	_ "github.com/rclone/rclone/backend/protondrive"
 	_ "github.com/rclone/rclone/backend/sftp"
