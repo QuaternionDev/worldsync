@@ -1,0 +1,20 @@
+# Binary
+worldsync
+worldsync.exe
+
+# Build output
+/dist/
+
+# Go
+/vendor/
+
+# State és backup fájlok (ezek lokálisak, nem kellenek a repóba)
+/state/
+*.json
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
