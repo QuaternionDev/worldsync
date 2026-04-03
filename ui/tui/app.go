@@ -19,10 +19,12 @@ const (
 
 // Stílusok
 var (
-	colorPrimary  = lipgloss.Color("#00FF87")
-	colorMuted    = lipgloss.Color("#626262")
-	colorError    = lipgloss.Color("#FF4444")
-	colorSelected = lipgloss.Color("#00FF87")
+	colorPrimary   = lipgloss.Color("#B48EAD")
+	colorSecondary = lipgloss.Color("#81A1C1")
+	colorMuted     = lipgloss.Color("#4C566A")
+	colorError     = lipgloss.Color("#BF616A")
+	colorSelected  = lipgloss.Color("#D8A9F0")
+	colorBorder    = lipgloss.Color("#6B4F8E")
 
 	styleTitle = lipgloss.NewStyle().
 			Bold(true).
@@ -35,13 +37,13 @@ var (
 
 	styleActiveTab = lipgloss.NewStyle().
 			Padding(0, 2).
-			Foreground(colorPrimary).
+			Foreground(colorSelected).
 			Bold(true).
 			Underline(true)
 
 	styleBox = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(colorMuted).
+			BorderForeground(colorBorder).
 			Padding(1, 2)
 
 	styleSelected = lipgloss.NewStyle().
@@ -55,8 +57,8 @@ var (
 			Foreground(colorError)
 
 	styleStatusBar = lipgloss.NewStyle().
-			Background(lipgloss.Color("#1a1a1a")).
-			Foreground(colorMuted).
+			Background(lipgloss.Color("#2E1F47")).
+			Foreground(lipgloss.Color("#9B7FBF")).
 			Padding(0, 1)
 )
 
@@ -150,9 +152,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncing = false
 		if msg.err != nil {
 			m.err = msg.err
-			m.syncMsg = fmt.Sprintf("Hiba: %s", msg.err)
+			m.syncMsg = fmt.Sprintf("Error: %s", msg.err)
 		} else {
-			m.syncMsg = "✓ Szinkronizálás kész!"
+			m.syncMsg = "✓ Sync complete!"
 		}
 
 	case syncProgressMsg:
@@ -182,7 +184,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "s":
 			if !m.syncing && m.activeTab == tabWorlds {
 				m.syncing = true
-				m.syncMsg = "Szinkronizálás..."
+				m.syncMsg = "Syncing..."
 				return m, syncAllCmd(m.cfg)
 			}
 
@@ -203,7 +205,7 @@ func syncAllCmd(cfg *appconfig.Config) tea.Cmd {
 	return func() tea.Msg {
 		active := cfg.GetActiveProvider()
 		if active == nil {
-			return syncDoneMsg{err: fmt.Errorf("nincs aktív provider")}
+			return syncDoneMsg{err: fmt.Errorf("no active provider")}
 		}
 
 		launchers := launcher.DetectAll()
@@ -249,7 +251,7 @@ func (m Model) renderHeader() string {
 	if active := m.cfg.GetActiveProvider(); active != nil {
 		provider = styleMuted.Render(fmt.Sprintf("Provider: %s (%s)", active.Name, active.Type))
 	} else {
-		provider = styleError.Render("Nincs provider konfigurálva")
+		provider = styleError.Render("No provider configured")
 	}
 
 	return lipgloss.JoinHorizontal(
@@ -261,7 +263,7 @@ func (m Model) renderHeader() string {
 }
 
 func (m Model) renderTabs() string {
-	tabs := []string{"Világok", "Provider", "Beállítások"}
+	tabs := []string{"Worlds", "Provider", "Settings"}
 	rendered := []string{}
 
 	for i, tab := range tabs {
@@ -289,11 +291,11 @@ func (m Model) renderContent() string {
 
 func (m Model) renderWorlds() string {
 	if m.loading {
-		return styleBox.Render(styleMuted.Render("Világok betöltése..."))
+		return styleBox.Render(styleMuted.Render("Loading worlds..."))
 	}
 
 	if len(m.worlds) == 0 {
-		return styleBox.Render(styleMuted.Render("Nem található egyetlen világ sem."))
+		return styleBox.Render(styleMuted.Render("No worlds found."))
 	}
 
 	content := ""
@@ -347,8 +349,8 @@ func (m Model) renderWorlds() string {
 func (m Model) renderProvider() string {
 	if len(m.cfg.Providers) == 0 {
 		return styleBox.Render(
-			styleMuted.Render("Nincs konfigurált provider.\n\n") +
-				"Nyomd meg [A]-t egy új provider hozzáadásához.",
+			styleMuted.Render("Provider is not configured.\n\n") +
+				"Press [A] to add a new provider.",
 		)
 	}
 
@@ -370,7 +372,7 @@ func (m Model) renderSettings() string {
 	content := fmt.Sprintf(
 		"  Snapshot megőrzés:  %d\n"+
 			"  Sync kilépéskor:    %v\n"+
-			"  Config mappa:       %s\n",
+			"  Config directory:       %s\n",
 		m.cfg.KeepSnapshots,
 		m.cfg.SyncOnExit,
 		appconfig.ConfigDir(),
@@ -384,7 +386,7 @@ func (m Model) renderSettings() string {
 func (m Model) renderStatusBar() string {
 	keys := "[Tab] Navigáció  [↑/↓] Mozgás  [S] Sync  [R] Frissítés  [Q] Kilépés"
 	if m.syncing {
-		keys = styleMuted.Render("Szinkronizálás folyamatban...")
+		keys = styleMuted.Render("Sync in progress...")
 	}
 	return styleStatusBar.
 		Width(m.width).
