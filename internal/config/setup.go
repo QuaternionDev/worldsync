@@ -9,6 +9,7 @@ import (
 
 	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/config/configfile"
+	"github.com/rclone/rclone/fs/config/obscure"
 )
 
 // RunSetup elindítja az interaktív setup wizard-ot
@@ -135,9 +136,14 @@ func configureRclone(remoteName, providerType string) error {
 		pass, _ := promptPassword("Proton jelszó: ")
 		twofa, _ := prompt("2FA kód (ha van, különben Enter): ")
 
+		obscuredPass, err := obscure.Obscure(pass)
+		if err != nil {
+			return fmt.Errorf("jelszó titkosítása sikertelen: %w", err)
+		}
+
 		config.FileSetValue(remoteName, "type", "protondrive")
 		config.FileSetValue(remoteName, "username", email)
-		config.FileSetValue(remoteName, "password", pass)
+		config.FileSetValue(remoteName, "password", obscuredPass)
 		if twofa != "" {
 			config.FileSetValue(remoteName, "2fa", twofa)
 		}
@@ -148,10 +154,15 @@ func configureRclone(remoteName, providerType string) error {
 		user, _ := prompt("Felhasználónév: ")
 		pass, _ := promptPassword("Jelszó: ")
 
+		obscuredPass, err := obscure.Obscure(pass)
+		if err != nil {
+			return fmt.Errorf("jelszó titkosítása sikertelen: %w", err)
+		}
+
 		config.FileSetValue(remoteName, "type", "webdav")
 		config.FileSetValue(remoteName, "url", url)
 		config.FileSetValue(remoteName, "user", user)
-		config.FileSetValue(remoteName, "pass", pass)
+		config.FileSetValue(remoteName, "pass", obscuredPass)
 		config.SaveConfig()
 
 	case "sftp":
@@ -164,11 +175,16 @@ func configureRclone(remoteName, providerType string) error {
 			port = "22"
 		}
 
+		obscuredPass, err := obscure.Obscure(pass)
+		if err != nil {
+			return fmt.Errorf("jelszó titkosítása sikertelen: %w", err)
+		}
+
 		config.FileSetValue(remoteName, "type", "sftp")
 		config.FileSetValue(remoteName, "host", host)
 		config.FileSetValue(remoteName, "port", port)
 		config.FileSetValue(remoteName, "user", user)
-		config.FileSetValue(remoteName, "pass", pass)
+		config.FileSetValue(remoteName, "pass", obscuredPass)
 		config.SaveConfig()
 
 	case "smb":
@@ -177,11 +193,16 @@ func configureRclone(remoteName, providerType string) error {
 		user, _ := prompt("Felhasználónév: ")
 		pass, _ := promptPassword("Jelszó: ")
 
+		obscuredPass, err := obscure.Obscure(pass)
+		if err != nil {
+			return fmt.Errorf("jelszó titkosítása sikertelen: %w", err)
+		}
+
 		config.FileSetValue(remoteName, "type", "smb")
 		config.FileSetValue(remoteName, "host", host)
 		config.FileSetValue(remoteName, "share", share)
 		config.FileSetValue(remoteName, "user", user)
-		config.FileSetValue(remoteName, "pass", pass)
+		config.FileSetValue(remoteName, "pass", obscuredPass)
 		config.SaveConfig()
 
 	case "local":
