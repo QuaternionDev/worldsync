@@ -15,6 +15,10 @@ import (
 func RunSetup(cfg *Config) error {
 	configfile.Install()
 
+	config.SetConfigPath(
+		fmt.Sprintf("%s/rclone.conf", ConfigDir()),
+	)
+
 	fmt.Println("╔════════════════════════════════╗")
 	fmt.Println("║   WorldSync – Provider Setup   ║")
 	fmt.Println("╚════════════════════════════════╝")
@@ -33,10 +37,7 @@ func RunSetup(cfg *Config) error {
 	rcloneName := sanitizeName(name)
 
 	fmt.Println()
-	fmt.Println("A böngésző megnyílik a hitelesítéshez...")
-	fmt.Println()
 
-	// rclone interaktív konfiguráció futtatása
 	if err := configureRclone(rcloneName, string(provider)); err != nil {
 		return fmt.Errorf("rclone konfiguráció hiba: %w", err)
 	}
@@ -52,7 +53,6 @@ func RunSetup(cfg *Config) error {
 		return err
 	}
 
-	// Ha ez az első provider, állítsuk be aktívnak
 	if cfg.ActiveProvider == "" {
 		cfg.ActiveProvider = name
 	}
@@ -102,26 +102,88 @@ func selectProvider() (ProviderType, error) {
 }
 
 func configureRclone(remoteName, providerType string) error {
-	config.SetConfigPath(
-		fmt.Sprintf("%s/rclone.conf", ConfigDir()),
-	)
-
-	fs := config.FileSections()
-	for _, section := range fs {
+	// Ha már létezik, töröljük
+	for _, section := range config.FileSections() {
 		if section == remoteName {
-			fmt.Printf("'%s' már létezik, felülírjuk...\n", remoteName)
 			config.DeleteRemote(remoteName)
 			break
 		}
 	}
 
 	ctx := context.Background()
-	config.NewRemote(ctx, remoteName)
+
+	switch providerType {
+	case "onedrive", "drive", "protondrive":
+		fmt.Println("A böngésző megnyílik a hitelesítéshez...")
+		fmt.Println("Ha nem nyílik meg automatikusan, másold be a megjelenő URL-t.")
+		fmt.Println()
+		config.NewRemote(ctx, remoteName)
+
+	case "webdav":
+		url, _ := prompt("WebDAV URL (pl. https://nextcloud.example.com/remote.php/dav/files/user/): ")
+		user, _ := prompt("Felhasználónév: ")
+		pass, _ := promptPassword("Jelszó: ")
+
+		config.FileSetValue(remoteName, "type", "webdav")
+		config.FileSetValue(remoteName, "url", url)
+		config.FileSetValue(remoteName, "user", user)
+		config.FileSetValue(remoteName, "pass", pass)
+		config.SaveConfig()
+
+	case "sftp":
+		host, _ := prompt("SFTP szerver (pl. 192.168.1.100): ")
+		port, _ := prompt("Port (alapértelmezett: 22): ")
+		user, _ := prompt("Felhasználónév: ")
+		pass, _ := promptPassword("Jelszó: ")
+
+		if port == "" {
+			port = "22"
+		}
+
+		config.FileSetValue(remoteName, "type", "sftp")
+		config.FileSetValue(remoteName, "host", host)
+		config.FileSetValue(remoteName, "port", port)
+		config.FileSetValue(remoteName, "user", user)
+		config.FileSetValue(remoteName, "pass", pass)
+		config.SaveConfig()
+
+	case "smb":
+		host, _ := prompt("SMB szerver (pl. 192.168.1.100): ")
+		share, _ := prompt("Share neve (pl. backup): ")
+		user, _ := prompt("Felhasználónév: ")
+		pass, _ := promptPassword("Jelszó: ")
+
+		config.FileSetValue(remoteName, "type", "smb")
+		config.FileSetValue(remoteName, "host", host)
+		config.FileSetValue(remoteName, "share", share)
+		config.FileSetValue(remoteName, "user", user)
+		config.FileSetValue(remoteName, "pass", pass)
+		config.SaveConfig()
+
+	case "local":
+		path, _ := prompt("Mappa útvonala (pl. D:\\Backup\\Minecraft): ")
+
+		config.FileSetValue(remoteName, "type", "local")
+		config.FileSetValue(remoteName, "root", path)
+		config.SaveConfig()
+	}
+
 	return nil
 }
 
 // prompt beolvas egy sort a terminálból
 func prompt(label string) (string, error) {
+	fmt.Print(label)
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(input), nil
+}
+
+// promptPassword jelszót olvas be
+func promptPassword(label string) (string, error) {
 	fmt.Print(label)
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
