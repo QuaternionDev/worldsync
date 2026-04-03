@@ -117,7 +117,8 @@ func loadWorldsCmd() tea.Cmd {
 		for _, l := range launchers {
 			var allWorlds []world.World
 			for _, savesPath := range l.SavePaths {
-				worlds, err := world.ScanWorlds(savesPath)
+				instanceName := l.InstanceNames[savesPath]
+				worlds, err := world.ScanWorlds(savesPath, instanceName)
 				if err != nil {
 					continue
 				}
@@ -212,7 +213,8 @@ func syncAllCmd(cfg *appconfig.Config) tea.Cmd {
 		for _, l := range launchers {
 			var allWorlds []world.World
 			for _, savesPath := range l.SavePaths {
-				worlds, err := world.ScanWorlds(savesPath)
+				instanceName := l.InstanceNames[savesPath]
+				worlds, err := world.ScanWorlds(savesPath, instanceName)
 				if err != nil {
 					continue
 				}
@@ -291,11 +293,11 @@ func (m Model) renderContent() string {
 
 func (m Model) renderWorlds() string {
 	if m.loading {
-		return styleBox.Render(styleMuted.Render("Loading worlds..."))
+		return styleBox.Render(styleMuted.Render("Világok betöltése..."))
 	}
 
 	if len(m.worlds) == 0 {
-		return styleBox.Render(styleMuted.Render("No worlds found."))
+		return styleBox.Render(styleMuted.Render("Nem található egyetlen világ sem."))
 	}
 
 	content := ""
@@ -320,16 +322,25 @@ func (m Model) renderWorlds() string {
 			world.FormatSize(item.World.SizeBytes),
 		)
 
+		// Modpack megjelenítése ha van
+		modpack := ""
+		if item.World.ModpackName != "" {
+			modpack = styleMuted.Render(fmt.Sprintf(" [%s]", item.World.ModpackName))
+		}
+
 		if i == m.cursor {
 			cursor = styleSelected.Render("▶ ")
 			name = styleSelected.Render(fmt.Sprintf("%-28s", name))
 			info = styleSelected.Render(info)
+			if item.World.ModpackName != "" {
+				modpack = styleSelected.Render(fmt.Sprintf(" [%s]", item.World.ModpackName))
+			}
 		} else {
 			name = fmt.Sprintf("%-28s", name)
 			info = styleMuted.Render(info)
 		}
 
-		content += fmt.Sprintf("  %s%s  %s\n", cursor, name, info)
+		content += fmt.Sprintf("  %s%s%s  %s\n", cursor, name, modpack, info)
 	}
 
 	// Sync üzenet

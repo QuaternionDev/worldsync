@@ -62,14 +62,15 @@ func (d Difficulty) String() string {
 
 // World egy Minecraft világot reprezentál
 type World struct {
-	Name       string
-	Path       string
-	Version    string
-	GameMode   GameMode
-	Difficulty Difficulty
-	Seed       int64
-	LastPlayed time.Time
-	SizeBytes  int64
+	Name        string
+	Path        string
+	Version     string
+	GameMode    GameMode
+	Difficulty  Difficulty
+	Seed        int64
+	LastPlayed  time.Time
+	SizeBytes   int64
+	ModpackName string // üres ha vanilla
 }
 
 // levelDat a level.dat NBT struktúrája
@@ -107,7 +108,7 @@ type levelDatNewVersion struct {
 }
 
 // ScanWorlds megkeresi és beolvassa az összes világot egy saves mappában
-func ScanWorlds(savesPath string) ([]World, error) {
+func ScanWorlds(savesPath string, instanceName string) ([]World, error) {
 	entries, err := os.ReadDir(savesPath)
 	if err != nil {
 		return nil, err
@@ -122,7 +123,6 @@ func ScanWorlds(savesPath string) ([]World, error) {
 
 		worldPath := filepath.Join(savesPath, entry.Name())
 
-		// Kihagyjuk ha nincs level.dat (nem valódi világ, pl. NEI mappa)
 		levelDatPath := filepath.Join(worldPath, "level.dat")
 		if _, err := os.Stat(levelDatPath); os.IsNotExist(err) {
 			continue
@@ -133,6 +133,9 @@ func ScanWorlds(savesPath string) ([]World, error) {
 			fmt.Printf("  [debug] %s: %s\n", entry.Name(), err)
 			continue
 		}
+
+		// Ha az instance neve eltér a world névtől, az valószínűleg modpack
+		w.ModpackName = instanceName
 
 		worlds = append(worlds, *w)
 	}

@@ -79,7 +79,8 @@ func runSync(cmd *cobra.Command, args []string) {
 
 		var allWorlds []world.World
 		for _, savesPath := range l.SavePaths {
-			worlds, err := world.ScanWorlds(savesPath)
+			instanceName := l.InstanceNames[savesPath]
+			worlds, err := world.ScanWorlds(savesPath, instanceName)
 			if err != nil {
 				continue
 			}

@@ -8,8 +8,10 @@ import (
 
 // Launcher egy felismert Minecraft launchert reprezentál
 type Launcher struct {
-	Name      string   // pl. "Vanilla", "Prism Launcher"
-	SavePaths []string // az összes megtalált saves/ mappa
+	Name      string
+	SavePaths []string
+	// Minden saves/ mappához tartozó instance név
+	InstanceNames map[string]string // saves path -> instance name
 }
 
 // DetectAll megkeresi az összes telepített launchert
@@ -50,6 +52,7 @@ func detectVanilla() *Launcher {
 func detectPrism() *Launcher {
 	candidates := prismBasePaths()
 	var saves []string
+	instanceNames := make(map[string]string)
 
 	for _, base := range candidates {
 		instancesDir := filepath.Join(base, "instances")
@@ -67,7 +70,6 @@ func detectPrism() *Launcher {
 				continue
 			}
 
-			// Prism használhat "minecraft" vagy ".minecraft" mappát is
 			savesPath := filepath.Join(instancesDir, entry.Name(), "minecraft", "saves")
 			if !dirExists(savesPath) {
 				savesPath = filepath.Join(instancesDir, entry.Name(), ".minecraft", "saves")
@@ -75,6 +77,7 @@ func detectPrism() *Launcher {
 
 			if dirExists(savesPath) {
 				saves = append(saves, savesPath)
+				instanceNames[savesPath] = entry.Name()
 			}
 		}
 	}
@@ -83,13 +86,18 @@ func detectPrism() *Launcher {
 		return nil
 	}
 
-	return &Launcher{Name: "Prism Launcher", SavePaths: saves}
+	return &Launcher{
+		Name:          "Prism Launcher",
+		SavePaths:     saves,
+		InstanceNames: instanceNames,
+	}
 }
 
 // detectCurseForge a CurseForge instance-eit keresi
 func detectCurseForge() *Launcher {
 	candidates := curseForgeBasePaths()
 	var saves []string
+	instanceNames := make(map[string]string)
 
 	for _, base := range candidates {
 		instancesDir := filepath.Join(base, "minecraft", "Instances")
@@ -110,6 +118,7 @@ func detectCurseForge() *Launcher {
 			savesPath := filepath.Join(instancesDir, entry.Name(), "saves")
 			if dirExists(savesPath) {
 				saves = append(saves, savesPath)
+				instanceNames[savesPath] = entry.Name()
 			}
 		}
 	}
@@ -118,7 +127,11 @@ func detectCurseForge() *Launcher {
 		return nil
 	}
 
-	return &Launcher{Name: "CurseForge", SavePaths: saves}
+	return &Launcher{
+		Name:          "CurseForge",
+		SavePaths:     saves,
+		InstanceNames: instanceNames,
+	}
 }
 
 // --- Platform-specifikus útvonalak ---
