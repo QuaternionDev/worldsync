@@ -207,6 +207,55 @@ func (r *RcloneProvider) SyncWorld(localWorldPath, worldName string) error {
 	return sync.Sync(ctx, dstFs, srcFs, false)
 }
 
+// PullWorld letölt egy világot a remote-ról lokálisan
+func (r *RcloneProvider) PullWorld(worldName, localSavesPath string) error {
+	ctx := context.Background()
+
+	// Forrás fs (remote)
+	srcFs, err := fs.NewFs(ctx, r.remoteFsPath(worldName))
+	if err != nil {
+		return fmt.Errorf("remote fs hiba: %w", err)
+	}
+
+	// Cél fs (lokális saves mappa)
+	destPath := filepath.Join(localSavesPath, worldName)
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return fmt.Errorf("lokális mappa létrehozása sikertelen: %w", err)
+	}
+
+	dstFs, err := fs.NewFs(ctx, destPath)
+	if err != nil {
+		return fmt.Errorf("lokális fs hiba: %w", err)
+	}
+
+	return sync.Sync(ctx, dstFs, srcFs, false)
+}
+
+// ListWorlds listázza a remote-on lévő világokat
+func (r *RcloneProvider) ListWorlds() ([]string, error) {
+	ctx := context.Background()
+
+	remoteFs, err := fs.NewFs(ctx, r.remoteFsPath(""))
+	if err != nil {
+		return nil, fmt.Errorf("remote fs hiba: %w", err)
+	}
+
+	var worlds []string
+
+	entries, err := remoteFs.List(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("listázási hiba: %w", err)
+	}
+
+	for _, entry := range entries {
+		if _, ok := entry.(fs.Directory); ok {
+			worlds = append(worlds, entry.Remote())
+		}
+	}
+
+	return worlds, nil
+}
+
 // ConfigPath visszaadja az rclone config fájl helyét
 func ConfigPath() string {
 	return config.GetConfigPath()

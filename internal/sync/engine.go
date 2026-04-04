@@ -132,6 +132,70 @@ func (e *Engine) SyncToLocal(worldPath, destBase string) (*SyncResult, error) {
 	return result, nil
 }
 
+// PullFromRemote letölti a remote világokat a lokális saves mappába
+func (e *Engine) PullFromLocal(srcBase, savesPath string) error {
+	// Megkeresi a srcBase-ben lévő összes világot
+	entries, err := os.ReadDir(srcBase)
+	if err != nil {
+		return fmt.Errorf("backup mappa olvasása sikertelen: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		worldName := entry.Name()
+		srcWorldPath := filepath.Join(srcBase, worldName)
+		destWorldPath := filepath.Join(savesPath, worldName)
+
+		// Ellenőrizzük hogy lokálisan létezik-e már
+		if dirExists(destWorldPath) {
+			fmt.Printf("  ↔ %s már létezik lokálisan, kihagyva\n", worldName)
+			continue
+		}
+
+		// Letöltés (másolás)
+		fmt.Printf("  ↓ %s letöltése...\n", worldName)
+		if err := copyDir(srcWorldPath, destWorldPath); err != nil {
+			fmt.Printf("  ✗ %s: %s\n", worldName, err)
+			continue
+		}
+
+		fmt.Printf("  ✓ %s letöltve\n", worldName)
+	}
+
+	return nil
+}
+
+// copyDir rekurzívan másol egy mappát
+func copyDir(src, dest string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		destPath := filepath.Join(dest, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(destPath, 0755)
+		}
+
+		return copyFile(path, destPath)
+	})
+}
+
+// dirExists ellenőrzi hogy egy mappa létezik-e
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
 // --- State kezelés ---
 
 func (e *Engine) loadState(worldName string) (*WorldState, error) {
