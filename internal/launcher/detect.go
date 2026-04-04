@@ -163,10 +163,15 @@ func prismBasePaths() []string {
 		return []string{
 			filepath.Join(home, "Library", "Application Support", "PrismLauncher"),
 		}
-	default:
+	default: // linux
 		home, _ := os.UserHomeDir()
 		return []string{
+			// Flatpak
+			filepath.Join(home, ".var", "app", "org.prismlauncher.PrismLauncher", "data", "PrismLauncher"),
+			// Native / AUR
 			filepath.Join(home, ".local", "share", "PrismLauncher"),
+			// Snap
+			filepath.Join(home, "snap", "prismlauncher", "current", ".local", "share", "PrismLauncher"),
 		}
 	}
 }
@@ -182,10 +187,14 @@ func curseForgeBasePaths() []string {
 		return []string{
 			filepath.Join(home, "curseforge"),
 		}
-	default:
+	default: // linux
 		home, _ := os.UserHomeDir()
 		return []string{
+			// Flatpak
+			filepath.Join(home, ".var", "app", "com.curseforge.CurseForge", "data", "curseforge"),
+			// Native
 			filepath.Join(home, "curseforge"),
+			filepath.Join(home, ".local", "share", "curseforge"),
 		}
 	}
 }
